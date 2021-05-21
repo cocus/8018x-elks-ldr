@@ -11,10 +11,12 @@ _cpu_reset_entrypoint:
 .globl _init8018x_and_start
 _init8018x_and_start:
     xor %ax, %ax
-    mov %ax, %cs
     mov %ax, %ds
     mov %ax, %es
-    mov %ax, %ss        // DS = ES = SS = CS = 0x0000
+    mov %ax, %ss        // DS = ES = SS = 0x0000
+    
+    mov $0x600, %ax
+    mov %ax, %sp        // Set a stack pointer starting at 0x0000:0x0600 (elks doesn't use this addresses)
 
     // Setup UCS and LCS
 
@@ -33,6 +35,7 @@ _init8018x_and_start:
     mov $0xffa2, %dx    // SET UP LCS STOP REGISTER
     mov $0x200A, %ax    // 128kB Installed
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
+    // Now full FLASH and RAM should be properly mapped
 
     // Setup internal serial port
 
@@ -43,11 +46,6 @@ _init8018x_and_start:
     mov $0xff64, %dx    // S0CON
     mov $0x0021, %ax    // mode 1 asynchronous 10-bit
     out %ax, %dx
-
-    // Now full FLASH and RAM should be properly mapped
-
-    mov $0x100, %ax
-    mov %ax, %sp        // Set a stack pointer starting at 0x0000:0x0100
 
     // Call to ELKS init code that sets up INT19 handler
     lcall $0xe000, $0x0003
