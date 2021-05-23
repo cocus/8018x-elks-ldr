@@ -1,6 +1,6 @@
 OUTPUT_FORMAT(binary)
 OUTPUT_ARCH(i386)
-ENTRY(_start)
+ENTRY(_init8018x_and_start)
 
 /*
  * On startup the 8018X sets the UCS so it uses the last 1K segment before 1MB.
