@@ -47,9 +47,33 @@ _init8018x_and_start:
     mov $0x0021, %ax    // mode 1 asynchronous 10-bit
     out %ax, %dx
 
+    cld // so SI will increment on lodsb instructions
+    mov $message, %si
+banner_loop:
+    // check if the serial port has finished sending a byte
+    mov $0xff66, %dx    // S0STS
+serial_wait:
+    in %dx, %ax
+    test %al, 8         // TXE (transmitter empty)
+    jz serial_wait      // and if it hasn't finished, keep looping
+
+    lodsb %cs:(%si)     // AL = CS:[SI]; SI++
+    test %al, %al       // last element on the string is a null byte
+    jz no_more_text
+
+    mov $0xff6a, %dx    // T0BUF
+    out %al, %dx        // transmit byte from AL
+
+    jmp banner_loop
+
+no_more_text:
+
     // Call to ELKS init code that sets up INT19 handler
     lcall $0xe000, $0x0003
     // Now call that INT19
     int $0x19
     // Should never happen
     hlt
+
+message:
+    .asciz "ELKS loader for 8018x v0.2 (128k RAM/512k FLASH)\r\n"
