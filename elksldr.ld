@@ -8,8 +8,8 @@ ENTRY(_init8018x_and_start)
  */
 SECTIONS {
     . = 0x0;
-    /* with a CS=0xf000, this should land on 0xf0000+0xff00 = 0xfff00 */
-    .text 0xff00 : AT(0xff00) {
+    /* with a CS=0xf000, this should land on 0xf0000+0xf000 = 0xff000 */
+    .text 0xf000 : AT(0xf000) {
         *(.text);
         *(.rodata*);
     }
