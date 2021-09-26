@@ -1,12 +1,23 @@
 .code16
 
+.include "8018x.S"
+
 // This should land on 0xF000:0xFFF0
 .section .reset.text, "ax"
+
+// Note: Most of this code comes directly from
+// Wichit Sirichote's C188SBC https://www.kswichit.com/C188/c188sbc.htm
+// and Intel's datasheet for the 80C188
+
 .globl _cpu_reset_entrypoint
 _cpu_reset_entrypoint:
+    // Setup UCS now so it's possible to address the lower part of the 512kB FLASH
+    mov $UCSST, %dx
+    mov $0x8000, %ax
+    out %ax, %dx
     ljmp $0xf000, $_init8018x_and_start
 
-// This should land on 0xF000:0xFF00
+// This should land on 0xF000:0xF000
 .section .text, "ax"
 .globl _init8018x_and_start
 _init8018x_and_start:
@@ -19,61 +30,60 @@ _init8018x_and_start:
     mov %ax, %sp        // Set a stack pointer starting at 0x0000:0x0600 (elks doesn't use this addresses)
 
     // Setup UCS and LCS
-
-    mov $0xffa4, %dx
-    mov $0x8000, %ax
-    out %ax, %dx
-
-    mov $0xffa6, %dx    // FINISH SETTING UP UCS#
+    mov $UCSSP, %dx     // FINISH SETTING UP UCS#
     mov $0x000e, %ax    // set ISTOP for 0FFFFF ending loaction
     out %al, %dx        // REMEMBER, BYTE WRITE WORK OK
 
-    mov $0xffa0, %dx    // SET UP LCS START REGISTER
+    mov $LCSST, %dx     // SET UP LCS START REGISTER
     mov $0x0000, %ax    // LCS STARTS AT 0H, ZERO WAIT STATES!
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
 
-    mov $0xffa2, %dx    // SET UP LCS STOP REGISTER
+    mov $LCSSP, %dx     // SET UP LCS STOP REGISTER
     mov $0x200A, %ax    // 128kB Installed
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
     // Now full FLASH and RAM should be properly mapped
 
     // Setup internal serial port
-
-    mov $0xff60, %dx    // B0CMP
+    mov $B0CMP, %dx     // B0CMP
     mov $0x8033, %ax    // 38400 @ 16MHz
     out %ax, %dx
 
-    mov $0xff64, %dx    // S0CON
-    mov $0x0021, %ax    // mode 1 asynchronous 10-bit
+    mov $S0CON, %dx     // S0CON
+    mov $0x0001, %ax    // mode 1 asynchronous 10-bit
     out %ax, %dx
 
-    cld // so SI will increment on lodsb instructions
-    mov $message, %si
-banner_loop:
-    // check if the serial port has finished sending a byte
-    mov $0xff66, %dx    // S0STS
-serial_wait:
+    // Clear any pending RI or TI, just for safety
+    mov $S0STS, %dx    // S0STS
     in %dx, %ax
-    test %al, 8         // TXE (transmitter empty)
-    jz serial_wait      // and if it hasn't finished, keep looping
 
-    lodsb %cs:(%si)     // AL = CS:[SI]; SI++
-    test %al, %al       // last element on the string is a null byte
-    jz no_more_text
+    mov $S0CON, %dx    // S0CON
+    in %dx, %ax
+    or $0x0020, %ax    // REN = 1
+    out %ax, %dx
 
-    mov $0xff6a, %dx    // T0BUF
-    out %al, %dx        // transmit byte from AL
+    // print startup message
+    mov $message, %si
+    call pstr
 
-    jmp banner_loop
+#ifdef USING_PCBDUMP
+    // print PCB registers on startup (after setting up the serial port)
+    call print_peripheral
+#endif
 
-no_more_text:
+    // print startup message
+    mov $message_loading, %si
+    call pstr
 
     // Call to ELKS init code that sets up INT19 handler
     lcall $0xe000, $0x0003
     // Now call that INT19
     int $0x19
-    // Should never happen
+    // should never reach this point
     hlt
 
 message:
-    .asciz "ELKS loader for 8018x v0.2 (128k RAM/512k FLASH)\r\n"
+    .ascii "\r\n8018x ELKS loader built at " BUILD_TIMESTAMP
+    .asciz "\r\n"
+
+message_loading:
+    .asciz "Now jumping into ELKS...\r\n"
