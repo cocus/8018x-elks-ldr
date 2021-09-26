@@ -5,6 +5,17 @@ CC = ia16-elf-gcc
 AS = ia16-elf-as
 LD = ia16-elf-ld
 
+# Path for the elks Image
+ELKS_IMAGE = ../elks/elks/arch/i86/boot/Image
+# Path for the elks romfs.bin
+ELKS_ROMFS = ../elks/image/romfs.bin
+
+# set to 1 if you want to dump the PCB values on startup
+USE_PCBDUMP = 0
+
+# which flash part should be used when flashing eeproms using the minipro
+FLASH_PART = MBM29F040
+
 BUILDSTAMP = $(shell date)
 DEFINES += -DBUILD_TIMESTAMP='"$(BUILDSTAMP)"'
 
@@ -15,7 +26,7 @@ LDFLAGS = -nostdlib -T elksldr.ld
 ROMSIZE = 524288 # 512kB
 ROM_ELKS_IMAGE_AT = 917504 # 0xe0000
 ROM_ELKS_ROMFS_AT = 524288 # 0x80000
-ROM_LOADER_AT = 1048320 # 0xfff00
+ROM_LOADER_AT = 1044480 # 0xff000
 FLASH_START = $(shell expr 1048576 - $(ROMSIZE)) # 1M - ROMSIZE
 ROM_ELKS_IMAGE_OFFSET = $(shell expr $(ROM_ELKS_IMAGE_AT) - $(ROMSIZE))
 ROM_ELKS_ROMFS_OFFSET = $(shell expr $(ROM_ELKS_ROMFS_AT) - $(ROMSIZE))
@@ -23,25 +34,39 @@ ROM_LOADER_OFFSET = $(shell expr $(ROM_LOADER_AT) - $(ROMSIZE))
 
 EXE = elksldr.bin
 
+OBJS_PCBDUMP = \
+	pcbdump.o \
+	# end of list
+
 OBJS = \
 	elksldr.o \
+	8018x-serial.o \
 	# end of list
+
+ifeq ($(USE_PCBDUMP), 1)
+	OBJS += $(OBJS_PCBDUMP)
+	DEFINES += -DUSING_PCBDUMP
+endif
+
 .PHONY : all clean
 
 all: $(EXE).hex
 
+flash: rom
+	minipro -p $(FLASH_PART) -w $(EXE)-rom.bin
+
 rom: $(EXE).hex $(EXE)-rom.bin
 
 # Image and romfs.bin come directly from ELKS build
-$(EXE)-rom.bin: $(EXE) Image romfs.bin
+$(EXE)-rom.bin: $(EXE) $(ELKS_IMAGE) $(ELKS_ROMFS)
 	@echo "== creating ${ROMSIZE} ROM image"
 	@dd if=/dev/zero of=$(@) bs=${ROMSIZE} count=1
 	@echo " Adding $(EXE) at ${ROM_LOADER_OFFSET}"
 	@dd conv=notrunc if=$(EXE) of=$(@) bs=1 seek=${ROM_LOADER_OFFSET}
 	@echo " Adding Image at ${ROM_ELKS_IMAGE_OFFSET}"
-	@dd conv=notrunc if=Image of=$(@) bs=1 seek=${ROM_ELKS_IMAGE_OFFSET}
+	@dd conv=notrunc if=$(ELKS_IMAGE) of=$(@) bs=1 seek=${ROM_ELKS_IMAGE_OFFSET}
 	@echo " Adding romfs.bin at ${ROM_ELKS_ROMFS_OFFSET}"
-	@dd conv=notrunc if=romfs.bin of=$(@) bs=1 seek=${ROM_ELKS_ROMFS_OFFSET}
+	@dd conv=notrunc if=$(ELKS_ROMFS) of=$(@) bs=1 seek=${ROM_ELKS_ROMFS_OFFSET}
 
 $(EXE).hex: $(EXE)
 	@echo "== BIN->HEX $< -> $(@)"
