@@ -39,13 +39,35 @@ _init8018x_and_start:
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
 
     mov $LCSSP, %dx     // SET UP LCS STOP REGISTER
-    mov $0x200A, %ax    // 128kB Installed
+    mov $0x800A, %ax    // 512kB Installed
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
     // Now full FLASH and RAM should be properly mapped
 
+    // Setup GCS6 so status leds are available at 0x2002
+    mov $0x200f, %ax
+    mov $0xff98, %dx
+    out %ax, %dx
+    mov $0x2048, %ax
+    mov $0xff9a, %dx
+    out %ax, %dx
+
+    // turn some LEDs on :)
+    mov $0x2002, %dx
+    mov $0x00fe, %ax
+    out %ax, %dx
+
+    // Setup GCS4 for NE2K
+    mov $0x030f, %ax
+    mov $0xff90, %dx
+    out %ax, %dx
+    mov $0x03f8, %ax
+    mov $0xff92, %dx
+    out %ax, %dx
+
     // Setup internal serial port
     mov $B0CMP, %dx     // B0CMP
-    mov $0x8033, %ax    // 38400 @ 16MHz
+    //mov $0x8033, %ax    // 38400 @ 16MHz
+    mov $0x80cf, %ax    // 9600 @ 16MHz
     out %ax, %dx
 
     mov $S0CON, %dx     // S0CON
