@@ -13,6 +13,15 @@ ELKS_ROMFS = ../elks/image/romfs.bin
 # set to 1 if you want to dump the PCB values on startup
 USE_PCBDUMP = 0
 
+# set to 0 if you don't have LEDs on address 0xXXX2 of GCS6
+HAS_LEDS = 1
+
+# set to 1 if you have a NE2K card connected on GCS4
+HAS_NE2K = 0
+
+# set to 0 if you don't have a bq3285 on GCS2
+HAS_BQ3285 = 1
+
 # which flash part should be used when flashing eeproms using the minipro
 FLASH_PART = MBM29F040
 
@@ -46,6 +55,18 @@ OBJS = \
 ifeq ($(USE_PCBDUMP), 1)
 	OBJS += $(OBJS_PCBDUMP)
 	DEFINES += -DUSING_PCBDUMP
+endif
+
+ifeq ($(HAS_LEDS), 1)
+	DEFINES += -DHAS_LEDS
+endif
+
+ifeq ($(HAS_NE2K), 1)
+	DEFINES += -DHAS_NE2K
+endif
+
+ifeq ($(HAS_BQ3285), 1)
+	DEFINES += -DHAS_BQ3285
 endif
 
 .PHONY : all clean

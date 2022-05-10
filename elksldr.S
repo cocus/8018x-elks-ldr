@@ -43,26 +43,52 @@ _init8018x_and_start:
     out %al, %dx        // REMEMBER, BYTE WRITES WORK OK
     // Now full FLASH and RAM should be properly mapped
 
+#ifdef HAS_LEDS
     // Setup GCS6 so status leds are available at 0x2002
     mov $0x200f, %ax
-    mov $0xff98, %dx
+    mov $GCS6ST, %dx
     out %ax, %dx
     mov $0x2048, %ax
-    mov $0xff9a, %dx
+    mov $GSC6SP, %dx
     out %ax, %dx
 
     // turn some LEDs on :)
     mov $0x2002, %dx
     mov $0x00fe, %ax
     out %ax, %dx
+#endif
 
+#ifdef HAS_NE2K
     // Setup GCS4 for NE2K
     mov $0x030f, %ax
-    mov $0xff90, %dx
+    mov $GCS4ST, %dx
     out %ax, %dx
     mov $0x03f8, %ax
-    mov $0xff92, %dx
+    mov $GSC4SP, %dx
     out %ax, %dx
+#endif
+
+#ifdef HAS_BQ3285
+    // Setup GCS2 for bq3285
+    mov $0x020f, %ax
+    mov $GCS2ST, %dx
+    out %ax, %dx
+    mov $0x02f8, %ax
+    mov $GSC2SP, %dx
+    out %ax, %dx
+
+    mov $0x8a, %ax // UTI = 1, SQWE = 1, HF = 1 (24 hours), DF = 0
+    mov $0x20b, %dx
+    out %ax, %dx
+
+    mov $0x21, %ax // OS = 010 (osc on), RS = 1 (256Hz SQWE)
+    mov $0x20a, %dx
+    out %ax, %dx
+
+    mov $0x0a, %ax // UTI = 0, SQWE = 1, HF = 1 (24 hours), DF = 0
+    mov $0x20b, %dx
+    out %ax, %dx
+#endif
 
     // Setup internal serial port
     mov $B0CMP, %dx     // B0CMP
@@ -104,8 +130,17 @@ _init8018x_and_start:
     hlt
 
 message:
-    .ascii "\r\n8018x ELKS loader built at " BUILD_TIMESTAMP
-    .asciz "\r\n"
+    .ascii "\r\n8018x ELKS loader built at " BUILD_TIMESTAMP " ("
+#ifdef HAS_LEDS
+    .ascii "LEDS "
+#endif
+#ifdef HAS_NE2K
+	.ascii "NE2K "
+#endif
+#ifdef HAS_BQ3285
+	.ascii "BQ3285"
+#endif
+    .asciz ")\r\n"
 
 message_loading:
     .asciz "Now jumping into ELKS...\r\n"

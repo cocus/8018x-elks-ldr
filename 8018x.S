@@ -19,6 +19,23 @@
 .equ UCSST, 0xffA4
 .equ UCSSP, 0xffA6
 
+.equ GCS0ST, 0xff80
+.equ GSC0SP, 0xff82
+.equ GCS1ST, 0xff84
+.equ GSC1SP, 0xff86
+.equ GCS2ST, 0xff88
+.equ GSC2SP, 0xff8a
+.equ GCS3ST, 0xff8c
+.equ GSC3SP, 0xff8e
+.equ GCS4ST, 0xff90
+.equ GSC4SP, 0xff92
+.equ GCS5ST, 0xff84
+.equ GSC5SP, 0xff96
+.equ GCS6ST, 0xff98
+.equ GSC6SP, 0xff9a
+.equ GCS7ST, 0xff9c
+.equ GSC7SP, 0xff9e
+
 .equ T0CNT, 0xff30
 .equ T0CMPA, 0xff32
 .equ T0CMPB, 0xff34
