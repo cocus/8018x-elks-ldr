@@ -17,7 +17,7 @@ USE_PCBDUMP = 0
 HAS_LEDS = 1
 
 # set to 1 if you have a NE2K card connected on GCS4
-HAS_NE2K = 0
+HAS_NE2K = 1
 
 # set to 0 if you don't have a bq3285 on GCS2
 HAS_BQ3285 = 1
@@ -76,7 +76,25 @@ all: $(EXE).hex
 flash: rom
 	minipro -p $(FLASH_PART) -w $(EXE)-rom.bin
 
-rom: $(EXE).hex $(EXE)-rom.bin
+rom: $(EXE).hex $(EXE)-rom.bin memusage
+
+memusage: $(EXE) $(ELKS_IMAGE) $(ELKS_ROMFS)
+	$(eval ELKS_IMAGE_SIZE := $(shell stat -L -c %s $(ELKS_IMAGE)))
+	$(eval ELKS_ROMFS_SIZE := $(shell stat -L -c %s $(ELKS_ROMFS)))
+	$(eval ROM_LOADER_SIZE := $(shell stat -L -c %s $(EXE)))
+
+	$(eval ELKS_IMAGE_MAX_SIZE := $(shell expr $(ROM_LOADER_AT) - $(ROM_ELKS_IMAGE_AT)))
+	$(eval ELKS_ROMFS_MAX_SIZE := $(shell expr $(ROM_ELKS_IMAGE_AT) - $(ROM_ELKS_ROMFS_AT)))
+	$(eval ROM_LOADER_MAX_SIZE := $(shell expr 1048576 - $(ROM_LOADER_AT)))
+
+	$(eval ELKS_IMAGE_SIZE_PERCENTAGE := $(shell echo "${ELKS_IMAGE_SIZE}*100/${ELKS_IMAGE_MAX_SIZE}" | bc))
+	$(eval ELKS_ROMFS_SIZE_PERCENTAGE := $(shell echo "${ELKS_ROMFS_SIZE}*100/${ELKS_ROMFS_MAX_SIZE}" | bc))
+	$(eval ROM_LOADER_SIZE_PERCENTAGE := $(shell echo "${ROM_LOADER_SIZE}*100/${ROM_LOADER_MAX_SIZE}" | bc))
+
+	@echo "== memory usage:"
+	@echo "ELKS_IMAGE ${ELKS_IMAGE_SIZE_PERCENTAGE}%, ${ELKS_IMAGE_SIZE} out of ${ELKS_IMAGE_MAX_SIZE} bytes"
+	@echo "ELKS_ROMFS ${ELKS_ROMFS_SIZE_PERCENTAGE}%, ${ELKS_ROMFS_SIZE} out of ${ELKS_ROMFS_MAX_SIZE} bytes"
+	@echo "ROM_LOADER ${ROM_LOADER_SIZE_PERCENTAGE}%, ${ROM_LOADER_SIZE} out of ${ROM_LOADER_MAX_SIZE} bytes"
 
 # Image and romfs.bin come directly from ELKS build
 $(EXE)-rom.bin: $(EXE) $(ELKS_IMAGE) $(ELKS_ROMFS)
