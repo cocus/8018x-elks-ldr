@@ -5,10 +5,13 @@ CC = ia16-elf-gcc
 AS = ia16-elf-as
 LD = ia16-elf-ld
 
+ROMPRG = ../elks/elkscmd/or566flash/build/romprg
+ROMPRG_TTY = /dev/ttyUSB0
+
 # Path for the elks Image
-ELKS_IMAGE = ../elks/elks/arch/i86/boot/Image
+ELKS_IMAGE = ../elks2/elks/elks/arch/i86/boot/Image
 # Path for the elks romfs.bin
-ELKS_ROMFS = ../elks/image/romfs.bin
+ELKS_ROMFS = ../elks2/elks/image/romfs.bin
 
 # set to 1 if you want to dump the PCB values on startup
 USE_PCBDUMP = 0
@@ -75,6 +78,39 @@ all: $(EXE).hex
 
 flash: rom
 	minipro -p $(FLASH_PART) -w $(EXE)-rom.bin
+
+romprog-loader:
+	@echo "== romprog erase chip"
+	@$(ROMPRG) $(ROMPRG_TTY) erase chip
+	@echo "== romprog flash loader"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_LOADER_OFFSET} $(EXE)
+
+romprog-elks:
+	@echo "== romprog erase chip"
+	@$(ROMPRG) $(ROMPRG_TTY) erase chip
+	@echo "== romprog flash elks image"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_ELKS_IMAGE_OFFSET} $(ELKS_IMAGE)
+
+romprog-romfs:
+	@echo "== romprog erase chip"
+	@$(ROMPRG) $(ROMPRG_TTY) erase chip
+	@echo "== romprog flash romfs.bin"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_ELKS_ROMFS_OFFSET} $(ELKS_ROMFS)
+
+romprog: $(EXE) $(ELKS_IMAGE) $(ELKS_ROMFS)
+	@echo "== romprog ping"
+	@$(ROMPRG) $(ROMPRG_TTY) ping
+	@echo "== romprog id"
+	@$(ROMPRG) $(ROMPRG_TTY) id
+	@echo "== romprog erase chip"
+	@$(ROMPRG) $(ROMPRG_TTY) erase chip
+	@echo "== romprog flash loader"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_LOADER_OFFSET} $(EXE)
+	@echo "== romprog flash elks image"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_ELKS_IMAGE_OFFSET} $(ELKS_IMAGE)
+	@echo "== romprog flash romfs.bin"
+	@$(ROMPRG) $(ROMPRG_TTY) write ${ROM_ELKS_ROMFS_OFFSET} $(ELKS_ROMFS)
+
 
 rom: $(EXE).hex $(EXE)-rom.bin memusage
 
